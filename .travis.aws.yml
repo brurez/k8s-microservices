@@ -1,0 +1,33 @@
+language: generic
+sudo: required
+services:
+  - docker
+before_install:
+  - docker build -t brurez/docker-complex-client-t -f ./client/Dockerfile.dev ./client
+script:
+  - docker run -e CI=true brurez/docker-complex-client-t npm run test -- --coverage
+after_success:
+  - docker build -t brurez/docker-complex-client ./client
+  - docker build -t brurez/docker-complex-nginx ./nginx
+  - docker build -t brurez/docker-complex-server ./server
+  - docker build -t brurez/docker-complex-worker ./worker
+  # Log in to the docker CLI
+  -  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Push images to docker hub
+  - docker push brurez/docker-complex-client
+  - docker push brurez/docker-complex-nginx
+  - docker push brurez/docker-complex-server
+  - docker push brurez/docker-complex-worker
+deploy:
+  provider: elasticbeanstalk
+  region: "us-east-2"
+  app: "docker-complex"
+  env: "DockerComplex-env"
+  bucket_name: "elasticbeanstalk-us-east-2-363341556305"
+  bucket_path: "docker-complex"
+  on:
+    branch: master
+  access_key_id:
+    secure: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: $AWS_SECRET_KEY

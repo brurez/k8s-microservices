@@ -14,4 +14,3 @@ kubectl apply -f k8s
 kubectl set image deployments/client-deployment server=brurez/docker-complex-client:$SHA
 kubectl set image deployments/server-deployment server=brurez/docker-complex-server:$SHA
 kubectl set image deployments/worker-deployment server=brurez/docker-complex-worker:$SHA
-

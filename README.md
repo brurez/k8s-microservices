@@ -1,8 +1,7 @@
 # Kubernetes Microservices Example
 
 ## Development
-`kubectl create secret generic pgpasswor
- d --from-literal PGPASSWORD=postgress`
+`kubectl create secret generic pgpassword --from-literal PGPASSWORD=postgress`
 
 https://kubernetes.github.io/ingress-nginx/deploy/
 

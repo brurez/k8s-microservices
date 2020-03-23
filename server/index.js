@@ -6,8 +6,8 @@ const cors = require("cors");
 // Express app setup
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
 
+app.use(bodyParser.json());
 // Postgres client setup
 const { Pool } = require("pg");
 const pgClient = new Pool({
@@ -16,14 +16,15 @@ const pgClient = new Pool({
   database: keys.pgDatabase,
   port: keys.pgPort
 });
+
 pgClient.on("error", () => console.log("Lost PG connection"));
 
 pgClient
   .query("CREATE TABLE IF NOT EXISTS values (number INT)")
   .catch(err => console.log(err));
-
 // Redis client setup
 const redis = require("redis");
+
 const redisClient = redis.createClient({
   host: keys.redisHost,
   port: keys.redisPort,
@@ -31,6 +32,10 @@ const redisClient = redis.createClient({
 });
 
 const redisPublisher = redisClient.duplicate();
+
+// RabbitMQ setup
+const amqp = require('amqplib/callback_api');
+
 
 // Express route handlers
 app.get("/", (req, res) => {
@@ -60,6 +65,29 @@ app.post("/values", async (req, res) => {
   pgClient.query("INSERT INTO values(number) VALUES($1)", [index]);
 
   res.send({ working: true });
+});
+
+app.post("/prime-numbers", async (req, res) => {
+  const msg = req.body.index;
+
+  amqp.connect(keys.broker, function(error0, connection) {
+    if (error0) {
+      throw error0;
+    }
+    connection.createChannel(function(error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+      const queue = 'primes';
+
+      channel.assertQueue(queue, {
+        durable: false
+      });
+      channel.sendToQueue(queue, Buffer.from(msg));
+      console.log(" [x] Sent %s", msg);
+    });
+  });
+  res.send('');
 });
 
 app.listen(5000, err => {

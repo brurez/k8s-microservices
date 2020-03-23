@@ -6,6 +6,19 @@ services:
       - POSTGRES_PASSWORD=postgres_password
   redis:
     image: 'redis:latest'
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    hostname: 'my-rabbit'
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "4369:4369"
+      - "5671:5671"
+      - "5672:5672"
+      - "15671:15671"
+      - "15672:15672"
+      - "25672:25672"
   nginx:
     restart: always
     build:
@@ -28,8 +41,13 @@ services:
       - PGDATABASE=postgres
       - PGPASSWORD=postgres_password
       - PGPORT=5432
+      - BROKER_ADDR=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "9229:9229"
     depends_on:
       - postgres
+      - redis
+      - rabbitmq
   client:
     build:
       dockerfile: Dockerfile.dev
@@ -47,3 +65,16 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    depends_on:
+      - redis
+  primes-worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./primes-worker
+    volumes:
+      - /app/node_modules
+      - ./primes-worker:/app
+    environment:
+      - BROKER_ADDR=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq

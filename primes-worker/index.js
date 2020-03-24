@@ -30,8 +30,10 @@ const connectToBroker = () =>
       const queue = 'primes';
 
       channel.assertQueue(queue, {
-        durable: false,
+        durable: true,
       });
+
+      channel.prefetch(1);
 
       console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", queue);
 
@@ -39,18 +41,24 @@ const connectToBroker = () =>
         const index = msg.content.toString();
         let msg2;
         console.log(" [x] Received %s", index);
+
         if (!primes.get(index)) {
           const isPrimeNumber = isPrime(index);
           primes.set(index, isPrimeNumber);
           msg2 = `{number: ${index}, isPrime: ${isPrimeNumber}}`;
-          channel.sendToQueue('primes-answer', Buffer.from(msg2));
         } else {
           msg2 = `{number: ${index}, isPrime: ${primes.get(index)}}`;
-          channel.sendToQueue('primes-answer', Buffer.from(msg2));
         }
-        console.log(" [x] Sent %s", msg2);
+
+        channel.ack(msg);
+
+        channel.assertExchange('exchange', 'fanout', {
+          durable: false
+        });
+        channel.publish('exchange', '', Buffer.from(msg2));
+        console.log(" [x] Published prime result %s", msg2);
       }, {
-        noAck: true,
+        noAck: false,
       });
     });
   });

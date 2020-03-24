@@ -78,3 +78,9 @@ services:
       - BROKER_ADDR=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
+    deploy:
+      mode: replicated
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.1'

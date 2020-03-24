@@ -81,14 +81,53 @@ app.post("/prime-numbers", async (req, res) => {
       const queue = 'primes';
 
       channel.assertQueue(queue, {
-        durable: false
+        durable: true
       });
-      channel.sendToQueue(queue, Buffer.from(msg));
+      channel.sendToQueue(queue, Buffer.from(msg), {
+        persistent: true
+      });
       console.log(" [x] Sent %s", msg);
     });
   });
   res.send('');
 });
+
+const connectToBroker = () => {
+  amqp.connect(keys.broker, function (error0, connection) {
+    if (error0) {
+      setTimeout(connectToBroker, 1000);
+      return;
+    }
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+
+      channel.assertExchange('exchange', 'fanout', {
+        durable: false
+      });
+
+      channel.assertQueue('', {
+        exclusive: true
+      }, function (error2, q) {
+        if (error2) {
+          throw error2;
+        }
+        console.log(" [*] Subscription ON", q.queue);
+        channel.bindQueue(q.queue, 'exchange', '');
+        channel.consume(q.queue, function (msg) {
+          if (msg.content) {
+            console.log("Prime result received [x] %s", msg.content.toString());
+          }
+        }, {
+          noAck: true
+        });
+      });
+    });
+  });
+};
+
+connectToBroker();
 
 app.listen(5000, err => {
   console.log("Listening");
